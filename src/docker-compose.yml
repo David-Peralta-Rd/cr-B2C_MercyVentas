@@ -1,0 +1,35 @@
+name: mercyventas
+services:
+  db:
+    image: postgres:18
+    env_file: .env
+    volumes: ["pgdata:/var/lib/postgresql"]   # ruta de PostgreSQL 18 «verificar»
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+  backend:
+    build: ./backend
+    env_file: .env
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on: {db: {condition: service_healthy}}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+  frontend:
+    build: ./frontend
+    env_file: .env
+    ports: ["8501:8501"]
+    depends_on: {backend: {condition: service_healthy}}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 10s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+volumes:
+  pgdata:

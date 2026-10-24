@@ -1,34 +1,41 @@
 # AGENTS.md — cr-B2C_MercyVentas
 
 ## Proyecto
-<una línea: qué es y para quién>
+Tienda de logistica para productos  y administracion de ganancias.
+
 
 ## Stack
-<lenguaje, framework, base de datos y versión de cada uno>
+- Python 3.14.8 (excepción: Django 6.1 no soporta 3.15 aún), uv (pyproject.toml y uv.lock generados por uv).
+- Backend: Django 6.1 + django-ninja, PostgreSQL 18, gunicorn + whitenoise. Frontend: Streamlit, servicio aparte que habla con el backend por HTTP.
+- Calidad: pytest + pytest-django, ruff, mypy.
+- Docker: prod (docker-compose.yml + Dockerfile) y dev (docker-compose.dev.yml + Dockerfile.dev).
 
 ## Comandos
-- Instalar: <comando>
-- Test: <comando>
-- Lint y tipos: <comando>
-- Levantar local: `docker compose up`
+Atajo: `DEVX` = `cd src && docker compose -f docker-compose.dev.yml exec backend`
+- Levantar prod: `cd src && docker compose up --build -d`
+- Levantar dev: `cd src && docker compose -f docker-compose.dev.yml up --build` (uno a la vez, comparten puertos)
+- Tests: `DEVX pytest` (frontend: `cd src/frontend && uv run pytest`)
+- Lint: `cd src/backend && uv run ruff check .` (frontend igual en `src/frontend`)
+- Tipos: `DEVX mypy .`
+- Migraciones: `DEVX manage makemigrations <app>` y `DEVX manage migrate`
+- Crear dominio: `cd src/backend && mkdir apps/x && uv run manage startapp x apps/x`, luego `name = "apps.x"` en apps.py
+- Comandos de [project.scripts]: backend `manage`, `serve`; frontend `serve` (local: `uv run <comando>`)
+- Reconstruir imágenes (tras uv add o cambio en scripts): `cd src && docker compose build && docker compose -f docker-compose.dev.yml build`
+- Backup: `bash src/scripts/backup.sh`
 
-## Convenciones
-- Commits convencionales; una tarea por rama.
-- Toda función nueva trae su test en el mismo cambio.
-- Nada de lógica de negocio en los controladores/rutas: va en servicios.
-
-## Estilo (Python; borra esta sección si el proyecto no lo es)
-- Responde en español; código conciso, sin explicaciones largas salvo que se pidan.
-- Type hints completos (parámetros, retornos incluido `-> None`, variables no obvias); que pase Pylance en modo strict. Nada de `Any` salvo necesidad, con un comentario corto del porqué.
-- Genéricos de `typing` modernos (`list[str]`, `dict[str, int]`); dataclasses o Pydantic en vez de diccionarios sueltos.
-- Nombres explícitos; `pathlib.Path` en vez de `os.path`.
-- Tests con pytest (funciones `test_*`, fixtures), nunca `unittest.TestCase`.
-- Sigue el estilo del archivo abierto; no reformatees lo que no te pedí tocar.
+## Estructura
+Raíz: solo archivos de IA, README.md, .gitignore, .gitattributes, docs/ y scaffold.sh. Todo lo demás en `src/`: `backend/` (config/ y apps/{core,accounts,inventory,sales}, cada dominio con models, services, schemas, api y tests/), `frontend/` (mercy_front/ con app.py, api_client.py, pages/), docker-compose*.yml, .env.example, scripts/. La lógica de negocio vive en `services.py`, no en `api.py`.
 
 ## Nunca
-- Tocar migraciones ya aplicadas, secretos o archivos `.env`.
-- Instalar dependencias sin explicar por qué.
-- Cambiar autenticación, permisos o manejo de pagos sin que la tarea esté marcada [YO] y revisada por el humano.
+- Nunca crear a mano lo que un generador produce (uv init, uv add, startproject, startapp, makemigrations).
+- Nunca crear código, Dockerfiles, entrypoints, .dockerignore, .env ni scripts fuera de `src/`.
+- Nunca usar CMD en un Dockerfile si el entrypoint.sh puede hacerlo.
+- Nunca meter un comando largo en el entrypoint si cabe en [project.scripts].
+- Nunca poner lógica de negocio en cli.py.
+- Nunca editar un Dockerfile sin revisar su par Dockerfile.dev, ni un compose sin el otro.
+- Nunca montar volúmenes de código en docker-compose.yml (solo en dev).
+- Nunca pinear versiones de paquetes a mano ni usar pre-releases.
+- Nunca tocar autenticación, secretos o migraciones destructivas sin que lo revise el dueño ([YO]).
 
 ## Cómo trabajas
 1. Lee `SPEC.md` y `tasks.md`.
